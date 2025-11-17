@@ -1,16 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI SDK V5 Playground
+
+A playground project for learning and experimenting with [AI SDK V5](https://ai-sdk.dev/) by Vercel. This project serves as a sandbox to familiarize myself with the AI SDK's features, patterns, and best practices.
+
+## About AI SDK V5
+
+The AI SDK is a TypeScript toolkit designed to help developers build AI-powered applications and agents with React, Next.js, Vue, Svelte, Node.js, and more. It provides:
+
+- **AI SDK Core:** A unified API for generating text, structured objects, tool calls, and building agents with LLMs
+- **AI SDK UI:** Framework-agnostic hooks for quickly building chat and generative user interfaces
+
+## Tech Stack
+
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router)
+- **AI SDK:** [AI SDK V5](https://ai-sdk.dev/) (`ai@^5.0.93`)
+- **React:** React 19
+- **Styling:** Tailwind CSS v4
+- **UI Components:** shadcn/ui (via `components.json`)
+- **Package Manager:** Bun
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+```
+
+Then, run the development server:
+
+```bash
 bun dev
 ```
 
@@ -18,19 +36,34 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Learning Resources
 
-## Learn More
+### Official Documentation
 
-To learn more about Next.js, take a look at the following resources:
+- [AI SDK Documentation](https://ai-sdk.dev/docs/introduction) - Complete guide to AI SDK V5
+- [AI SDK Cookbook](https://ai-sdk.dev/cookbook) - Recipes and examples
+- [AI SDK Providers](https://ai-sdk.dev/providers) - Supported model providers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Key Concepts to Explore
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Text Generation** - Using `generateText()` and `streamText()`
+- **Structured Outputs** - Generating structured data with Zod schemas
+- **Tool Calling** - Building AI agents with function calling
+- **Chat Interfaces** - Using `useChat()` hook for conversational UIs
+- **Streaming** - Real-time streaming responses
+- **Agents** - Building multi-step AI agents
+- **Model Providers** - Working with OpenAI, Anthropic, Google, and more
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+aisdkv5-playground/
+├── app/              # Next.js App Router pages
+├── lib/              # Utility functions and helpers
+├── components/       # React components (if using shadcn/ui)
+└── public/           # Static assets
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Documentation Reference
+
+For the complete AI SDK documentation in Markdown format, visit [ai-sdk.dev/llms.txt](https://ai-sdk.dev/llms.txt) - useful for LLM-assisted development with Cursor, Windsurf, Copilot, or Claude.
