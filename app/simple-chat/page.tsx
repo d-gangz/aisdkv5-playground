@@ -29,8 +29,35 @@ import {
   PromptInputProvider,
   PromptInputTextarea,
   PromptInputSubmit,
+  PromptInputHeader,
+  PromptInputAttachments,
+  PromptInputAttachment,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputTools,
+  PromptInputActionMenu,
+  PromptInputActionMenuTrigger,
+  PromptInputActionMenuContent,
+  PromptInputActionAddAttachments,
+  usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+
+function ConditionalHeader() {
+  const attachments = usePromptInputAttachments();
+  
+  if (!attachments.files.length) {
+    return null;
+  }
+  
+  return (
+    <PromptInputHeader>
+      <PromptInputAttachments>
+        {(attachment) => <PromptInputAttachment data={attachment} />}
+      </PromptInputAttachments>
+    </PromptInputHeader>
+  );
+}
 
 export default function Chat() {
   const { messages, sendMessage, status } = useChat();
@@ -40,8 +67,14 @@ export default function Chat() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _event: React.FormEvent<HTMLFormElement>
   ) => {
-    if (message.text.trim()) {
-      sendMessage({ text: message.text });
+    const hasText = Boolean(message.text?.trim());
+    const hasAttachments = Boolean(message.files?.length);
+
+    if (hasText || hasAttachments) {
+      sendMessage({
+        text: message.text || 'Sent with attachments',
+        files: message.files,
+      });
     }
   };
 
@@ -83,16 +116,26 @@ export default function Chat() {
         <PromptInputProvider>
           <PromptInput
             onSubmit={handleSubmit}
-            className="mt-4 w-full px-4 relative"
+            className="mt-4 w-full px-4"
+            multiple
           >
-            <PromptInputTextarea
-              placeholder="Say something..."
-              className="pr-12"
-            />
-            <PromptInputSubmit
-              status={status === 'streaming' ? 'streaming' : 'ready'}
-              className="absolute bottom-1 right-1"
-            />
+            <ConditionalHeader />
+            <PromptInputBody>
+              <PromptInputTextarea placeholder="Say something..." />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools>
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger />
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+              </PromptInputTools>
+              <PromptInputSubmit
+                status={status === 'streaming' ? 'streaming' : 'ready'}
+              />
+            </PromptInputFooter>
           </PromptInput>
         </PromptInputProvider>
       </div>
