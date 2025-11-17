@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@source "../node_modules/streamdown/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -118,5 +119,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Custom scrollbar styles for light mode */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background: oklch(0.7 0 0 / 0.3);
+    border-radius: 4px;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.6 0 0 / 0.5);
+  }
+  
+  /* Dark mode scrollbar */
+  .dark *::-webkit-scrollbar-thumb {
+    background: oklch(0.5 0 0 / 0.4);
+  }
+  
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.6 0 0 / 0.6);
   }
 }
