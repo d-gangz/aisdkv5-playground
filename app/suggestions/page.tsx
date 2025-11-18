@@ -63,7 +63,7 @@ function ConditionalHeader() {
 }
 
 export default function Chat() {
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status } = useChat<MyMessage>({
     transport: new DefaultChatTransport({ api: '/api/suggestions' }),
   });
 
@@ -84,13 +84,10 @@ export default function Chat() {
   };
 
   // Extract suggestions from the latest assistant message
-  // Using MyMessage type from backend for type safety
+  // messages is automatically typed as MyMessage[] via useChat<MyMessage>
   const suggestions: string[] = useMemo(() => {
-    // Type assertion: messages from useChat should match MyMessage type
-    const typedMessages = messages as MyMessage[];
-
     // Find the latest assistant message
-    const latestAssistantMessage = [...typedMessages]
+    const latestAssistantMessage = [...messages]
       .reverse()
       .find((msg) => msg.role === 'assistant');
 
