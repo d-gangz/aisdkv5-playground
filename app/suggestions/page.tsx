@@ -44,7 +44,8 @@ import {
   usePromptInputAttachments,
 } from '@/components/ai-elements/prompt-input';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
-import { Suggestions, Suggestion } from '@/components/ai-elements/suggestion';
+import { Suggestion } from '@/components/ai-elements/suggestion';
+import { CornerDownRightIcon } from 'lucide-react';
 
 function ConditionalHeader() {
   const attachments = usePromptInputAttachments();
@@ -151,23 +152,22 @@ export default function Chat() {
                 </Fragment>
               ))
             )}
+            {suggestions.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {suggestions.map((suggestion, index) => (
+                  <Suggestion
+                    key={index}
+                    suggestion={suggestion}
+                    onClick={handleSuggestionClick}
+                    icon={CornerDownRightIcon}
+                    className="w-fit"
+                  />
+                ))}
+              </div>
+            )}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
-
-        {suggestions.length > 0 && (
-          <div className="mt-4 px-4">
-            <Suggestions>
-              {suggestions.map((suggestion, index) => (
-                <Suggestion
-                  key={index}
-                  suggestion={suggestion}
-                  onClick={handleSuggestionClick}
-                />
-              ))}
-            </Suggestions>
-          </div>
-        )}
 
         <PromptInputProvider>
           <PromptInput
