@@ -1,98 +1,162 @@
 /**
- * Next.js Server Actions for database operations
+ * Database server actions for chat message persistence
  *
- * Input data sources: Function parameters from client components
+ * Input data sources: Function parameters from client/server
  * Output destinations: Supabase Postgres via Drizzle ORM
- * Dependencies: drizzle-orm, ./schema, ./index (db client)
- * Key exports: createChat, getChatWithMessages, addMessage, updateChatTitle
- * Side effects: Database INSERT, SELECT, UPDATE operations
+ * Dependencies: drizzle-orm, schema, message-mapping utilities
+ * Key exports: getChat, createChat, upsertMessage, loadChat, deleteMessage, deleteChat, getChats
+ * Side effects: Database INSERT, SELECT, UPDATE, DELETE operations
  */
 
 'use server';
 
-import { db } from './index';
-import { chats, messages, type Chat, type Message } from './schema';
-import { eq, desc } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { chats, messages, parts } from '@/lib/db/schema';
+import { UIMessage } from 'ai';
+import {
+  mapUIMessagePartsToDBParts,
+  mapDBPartToUIMessagePart,
+} from '@/lib/utils/message-mapping';
 
 /**
- * Create a new chat session
- * @param title - Optional chat title (defaults to "New Chat")
- * @returns The created chat object
+ * Get a chat by ID
+ * @returns The chat record or null if not found
  */
-export async function createChat(title?: string): Promise<Chat> {
+export const getChat = async (chatId: string) => {
   const [chat] = await db
-    .insert(chats)
-    .values({
-      title: title ?? 'New Chat',
-    })
-    .returning();
-
-  return chat;
-}
+    .select()
+    .from(chats)
+    .where(eq(chats.id, chatId))
+    .limit(1);
+  return chat || null;
+};
 
 /**
- * Get a chat with all its messages
- * @param chatId - UUID of the chat
- * @returns Chat object with messages array, or null if not found
+ * Create a new chat session with provided ID
+ * @param chatId - The chat ID (generated on frontend)
  */
-export async function getChatWithMessages(chatId: string): Promise<
-  (Chat & { messages: Message[] }) | null
-> {
-  const result = await db.query.chats.findFirst({
-    where: eq(chats.id, chatId),
+export const createChat = async (chatId: string): Promise<void> => {
+  await db.insert(chats).values({ id: chatId });
+};
+
+/**
+ * Insert or update a message in the database
+ *
+ * This function:
+ * 1. Upserts the message record
+ * 2. Deletes existing parts for the message
+ * 3. Inserts new parts
+ *
+ * All operations are wrapped in a transaction for atomicity.
+ */
+export const upsertMessage = async ({
+  chatId,
+  message,
+}: {
+  chatId: string;
+  message: UIMessage;
+}): Promise<void> => {
+  const messageId = message.id;
+
+  // Map UI message parts to database format
+  const mappedDBUIParts = mapUIMessagePartsToDBParts(message.parts, messageId);
+
+  // Use transaction to ensure atomicity
+  await db.transaction(async (tx) => {
+    // Upsert message (insert or update if exists)
+    await tx
+      .insert(messages)
+      .values({
+        chatId,
+        role: message.role,
+        id: messageId,
+      })
+      .onConflictDoUpdate({
+        target: messages.id,
+        set: {
+          chatId,
+        },
+      });
+
+    // Delete existing parts (in case of update)
+    await tx.delete(parts).where(eq(parts.messageId, messageId));
+
+    // Insert new parts if any exist
+    if (mappedDBUIParts.length > 0) {
+      await tx.insert(parts).values(mappedDBUIParts);
+    }
+  });
+};
+
+/**
+ * Load all messages for a chat
+ *
+ * Retrieves messages with their parts, ordered by creation time.
+ */
+export const loadChat = async (chatId: string): Promise<UIMessage[]> => {
+  // Use Drizzle's relational query API
+  const result = await db.query.messages.findMany({
+    where: eq(messages.chatId, chatId),
     with: {
-      messages: {
-        orderBy: [desc(messages.createdAt)],
+      parts: {
+        orderBy: (parts, { asc }) => [asc(parts.order)],
       },
     },
+    orderBy: (messages, { asc }) => [asc(messages.createdAt)],
   });
 
-  return result ?? null;
-}
+  // Map database results back to UI format
+  return result.map((message) => ({
+    id: message.id,
+    role: message.role,
+    parts: message.parts.map((part) => mapDBPartToUIMessagePart(part)),
+  }));
+};
 
 /**
- * Add a message to a chat
- * @param chatId - UUID of the chat
- * @param role - Message role ('user' | 'assistant')
- * @param content - Message text content
- * @returns The created message object
+ * Delete a chat and all associated messages/parts
+ *
+ * Cascade delete ensures messages and parts are also deleted.
  */
-export async function addMessage(
-  chatId: string,
-  role: 'user' | 'assistant',
-  content: string
-): Promise<Message> {
-  const [message] = await db
-    .insert(messages)
-    .values({
-      chatId,
-      role,
-      content,
-    })
-    .returning();
-
-  return message;
-}
+export const deleteChat = async (chatId: string): Promise<void> => {
+  await db.delete(chats).where(eq(chats.id, chatId));
+};
 
 /**
- * Update chat title
- * @param chatId - UUID of the chat
- * @param title - New title
- * @returns Updated chat object
+ * Delete a message and all subsequent messages in the chat
+ *
+ * This is useful for implementing "regenerate" functionality.
  */
-export async function updateChatTitle(
-  chatId: string,
-  title: string
-): Promise<Chat> {
-  const [chat] = await db
-    .update(chats)
-    .set({
-      title,
-      updatedAt: new Date(),
-    })
-    .where(eq(chats.id, chatId))
-    .returning();
+export const deleteMessage = async (messageId: string): Promise<void> => {
+  await db.transaction(async (tx) => {
+    // Get the target message to find its chat and timestamp
+    const [targetMessage] = await tx
+      .select()
+      .from(messages)
+      .where(eq(messages.id, messageId))
+      .limit(1);
 
-  return chat;
-}
+    if (!targetMessage) return;
 
+    // Delete all messages after this one in the chat
+    await tx
+      .delete(messages)
+      .where(
+        and(
+          eq(messages.chatId, targetMessage.chatId),
+          gt(messages.createdAt, targetMessage.createdAt)
+        )
+      );
+
+    // Delete the target message (cascade delete will handle parts)
+    await tx.delete(messages).where(eq(messages.id, messageId));
+  });
+};
+
+/**
+ * Get all chats (for listing)
+ */
+export const getChats = async () => {
+  return await db.select().from(chats);
+};
