@@ -1,0 +1,4 @@
+ALTER TABLE "parts" DROP CONSTRAINT "source_url_fields_required";--> statement-breakpoint
+ALTER TABLE "parts" DROP CONSTRAINT "source_document_fields_required";--> statement-breakpoint
+ALTER TABLE "parts" ADD CONSTRAINT "source_url_fields_required" CHECK (CASE WHEN "parts"."type" = 'source-url' THEN "parts"."source_url_source_id" IS NOT NULL AND "parts"."source_url_url" IS NOT NULL ELSE TRUE END);--> statement-breakpoint
+ALTER TABLE "parts" ADD CONSTRAINT "source_document_fields_required" CHECK (CASE WHEN "parts"."type" = 'source-document' THEN "parts"."source_document_source_id" IS NOT NULL AND "parts"."source_document_media_type" IS NOT NULL AND "parts"."source_document_title" IS NOT NULL ELSE TRUE END);

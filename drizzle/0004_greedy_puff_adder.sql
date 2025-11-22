@@ -1,0 +1,1 @@
+ALTER TABLE "parts" ALTER COLUMN "message_id" SET DATA TYPE varchar(255);

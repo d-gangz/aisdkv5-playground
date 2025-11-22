@@ -8,6 +8,34 @@
       "when": 1763715767078,
       "tag": "0000_slim_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1763777174569,
+      "tag": "0001_lonely_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1763777312468,
+      "tag": "0002_sturdy_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1763791328251,
+      "tag": "0003_familiar_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763791331326,
+      "tag": "0004_greedy_puff_adder",
+      "breakpoints": true
     }
   ]
 }
