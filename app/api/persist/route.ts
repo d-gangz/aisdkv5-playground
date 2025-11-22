@@ -1,36 +1,69 @@
 /**
- * API route that streams a chat response followed by follow-up question suggestions.
+ * API route for persistent chat with streaming responses
  *
- * Flow Overview:
- * 1. Stream the main chat response (text) to the frontend
- * 2. Wait for the text stream to complete
- * 3. Generate follow-up suggestions based on the completed response
- * 4. Stream the suggestions as they're being built
+ * Simplified approach using streamText directly with onFinish callback.
  *
- * Input data sources: POST request with messages array
- * Output destinations: Streaming response to frontend
- * Dependencies: OpenAI API, AI SDK streaming functions
+ * Flow:
+ * 1. Receive user message and chatId from frontend (chatId generated on frontend)
+ * 2. Check if chat exists, create if not (all DB operations on backend)
+ * 3. Persist user message to database immediately
+ * 4. Load full chat history from database
+ * 5. Stream AI response using streamText
+ * 6. Persist AI response when streaming completes (onFinish callback)
+ *
+ * Input data sources: POST request with message and chatId
+ * Output destinations: Streaming response to frontend, database persistence
+ * Dependencies: OpenAI API, AI SDK, database actions
  * Key exports: POST handler
- * Side effects: Makes API calls to OpenAI, streams data to client
+ * Side effects: Database writes, OpenAI API calls, streaming responses
  */
 
+import { getChat, createChat, upsertMessage, loadChat } from '@/lib/db/actions';
 import { openai } from '@ai-sdk/openai';
-import {
-  convertToModelMessages,
-  streamText,
-  type ModelMessage,
-  type UIMessage,
-} from 'ai';
+import { streamText, convertToModelMessages, UIMessage } from 'ai';
+
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(req: Request): Promise<Response> {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  try {
+    // Parse request body
+    const { message, chatId }: { message: UIMessage; chatId: string } =
+      await req.json();
 
-  const modelMessages: ModelMessage[] = convertToModelMessages(messages);
+    // Validate inputs
+    if (!message || !chatId) {
+      return new Response('Missing message or chatId', { status: 400 });
+    }
 
-  const streamTextResult = await streamText({
-    model: openai('gpt-4o'),
-    messages: modelMessages,
-  });
+    // Step 1: Check if chat exists, create if not
+    const chat = await getChat(chatId);
+    if (!chat) {
+      await createChat(chatId);
+    }
 
-  return streamTextResult.toUIMessageStreamResponse();
+    // Step 2: Persist incoming user message immediately
+    await upsertMessage({ chatId, message });
+
+    // Step 3: Load conversation history from database
+    const messages = await loadChat(chatId);
+
+    // Step 4: Stream AI response using streamText
+    const result = streamText({
+      model: openai('gpt-4o'),
+      messages: convertToModelMessages(messages),
+    });
+
+    return result.toUIMessageStreamResponse({
+      onFinish: async ({ responseMessage }) => {
+        await upsertMessage({
+          chatId,
+          message: responseMessage,
+        });
+      },
+    });
+  } catch (error) {
+    console.error('API route error:', error);
+    return new Response('Internal server error', { status: 500 });
+  }
 }
