@@ -21,5 +21,5 @@ export default async function PersistChatPage({
   // Load messages from database
   const initialMessages = await loadChat(id);
 
-  return <PersistChat id={id} initialMessages={initialMessages} />;
+  return <PersistChat key={id} id={id} initialMessages={initialMessages} />;
 }

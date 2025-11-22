@@ -20,7 +20,7 @@
 
 import { getChat, createChat, upsertMessage, loadChat } from '@/lib/db/actions';
 import { openai } from '@ai-sdk/openai';
-import { streamText, convertToModelMessages, UIMessage } from 'ai';
+import { streamText, convertToModelMessages, UIMessage, generateId } from 'ai';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -43,7 +43,9 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Step 2: Persist incoming user message immediately
-    await upsertMessage({ chatId, message });
+    // Generate ID if message doesn't have one
+    const userMessageId = message.id || generateId();
+    await upsertMessage({ chatId, id: userMessageId, message });
 
     // Step 3: Load conversation history from database
     const messages = await loadChat(chatId);
@@ -56,8 +58,11 @@ export async function POST(req: Request): Promise<Response> {
 
     return result.toUIMessageStreamResponse({
       onFinish: async ({ responseMessage }) => {
+        // Generate ID if responseMessage doesn't have one
+        const messageId = responseMessage.id || generateId();
         await upsertMessage({
           chatId,
+          id: messageId,
           message: responseMessage,
         });
       },

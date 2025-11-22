@@ -53,11 +53,13 @@ export const createChat = async (chatId: string): Promise<void> => {
 export const upsertMessage = async ({
   chatId,
   message,
+  id,
 }: {
   chatId: string;
   message: UIMessage;
+  id: string;
 }): Promise<void> => {
-  const messageId = message.id;
+  const messageId = id;
 
   // Map UI message parts to database format
   const mappedDBUIParts = mapUIMessagePartsToDBParts(message.parts, messageId);
