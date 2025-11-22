@@ -125,7 +125,7 @@ export const messages = pgTable(
       .references(() => chats.id, { onDelete: 'cascade' })
       .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
-    role: varchar('role', { length: 20 }).notNull(), // 'user' | 'assistant' | 'system'
+    role: varchar()$type<UIMessage["role"]>().notNull(), // 'user' | 'assistant' | 'system'
   },
   (table) => [
     index('messages_chat_id_idx').on(table.chatId),
@@ -137,44 +137,38 @@ export const messages = pgTable(
 export const parts = pgTable(
   'parts',
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    messageId: uuid('message_id')
+    id: uuid().defaultRandom().primaryKey(),
+    messageId: uuid()
       .references(() => messages.id, { onDelete: 'cascade' })
       .notNull(),
-    type: varchar('type', { length: 100 }).notNull(),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    order: integer('order').notNull().default(0),
+    type: varchar().$type<UIMessage["parts"][0]["type"]>().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    order: integer().notNull().default(0),
 
     // Text fields
-    text_text: text('text_text'),
+    text_text: text(),
 
     // Reasoning fields
-    reasoning_text: text('reasoning_text'),
+    reasoning_text: text(),
 
     // File fields
-    file_mediaType: varchar('file_media_type', { length: 255 }),
-    file_filename: varchar('file_filename', { length: 500 }),
-    file_url: text('file_url'),
+    file_mediaType: varchar(),
+    file_filename: varchar(), // optional
+    file_url: varchar(),
 
     // Source URL fields
-    source_url_sourceId: varchar('source_url_source_id', { length: 255 }),
-    source_url_url: text('source_url_url'),
-    source_url_title: varchar('source_url_title', { length: 500 }),
+    source_url_sourceId: varchar(),
+    source_url_url: varchar(),
+    source_url_title: varchar(), // optional
 
     // Source document fields
-    source_document_sourceId: varchar('source_document_source_id', {
-      length: 255,
-    }),
-    source_document_mediaType: varchar('source_document_media_type', {
-      length: 255,
-    }),
-    source_document_title: varchar('source_document_title', { length: 500 }),
-    source_document_filename: varchar('source_document_filename', {
-      length: 500,
-    }),
+    source_document_sourceId: varchar(),
+    source_document_mediaType: varchar(),
+    source_document_title: varchar(), // optional
+    source_document_filename: varchar(), // optional
 
     // Provider metadata (for AI provider-specific data)
-    providerMetadata: jsonb('provider_metadata'),
+    providerMetadata: jsonb(),
   },
   (t) => [
     // Indexes for performance
@@ -472,6 +466,7 @@ export const mapDBPartToUIMessagePart = (part: Part): UIMessagePart => {
 ### Tests to Write
 
 Create `lib/utils/__tests__/message-mapping.test.ts`:
+
 - `test_mapUIMessagePartsToDBParts_text_part` - Test text mapping
 - `test_mapUIMessagePartsToDBParts_multiple_parts` - Test multiple parts with order
 - `test_mapDBPartToUIMessagePart_text_part` - Test reverse mapping
@@ -1136,16 +1131,19 @@ No tests for this phase
 Since this is a database-backed system with streaming, testing will be primarily manual:
 
 1. **Database Persistence**
+
    - Create chat → Check database for chat record
    - Send message → Check database for message + parts records
    - Send multiple messages → Verify all persist correctly
 
 2. **Message Loading**
+
    - Send messages → Refresh page → Verify messages reload
    - Check message order is preserved
    - Verify all part types load correctly
 
 3. **Streaming**
+
    - Send message → Verify response streams in real-time
    - Check no errors in browser console
    - Verify streaming completes successfully
@@ -1175,6 +1173,7 @@ Test the complete flow:
 ### Risk: Schema Migration Breaks Existing Data
 
 **Mitigation:**
+
 - This is a new feature on `/app/persist` routes
 - Existing `/app/chat` routes remain unchanged
 - Can test schema changes independently
@@ -1183,6 +1182,7 @@ Test the complete flow:
 ### Risk: Message Mapping Errors
 
 **Mitigation:**
+
 - Start with simple text-only messages
 - Add part types incrementally
 - Add error logging in mapping functions
@@ -1191,6 +1191,7 @@ Test the complete flow:
 ### Risk: Database Connection Issues
 
 **Mitigation:**
+
 - Verify `DATABASE_URL` is correctly set
 - Test connection before implementing features
 - Add try-catch blocks around database operations
@@ -1199,6 +1200,7 @@ Test the complete flow:
 ### Risk: Streaming Persistence Race Conditions
 
 **Mitigation:**
+
 - Use transactions for atomic operations
 - `onFinish` callback ensures completion before persisting
 - Database cascade deletes handle cleanup automatically
@@ -1232,18 +1234,21 @@ Test the complete flow:
 For each phase (or subphase if the phase has subphases):
 
 1. **Implement**
+
    - Read "Files to Read/Reference" first
    - Build what's described in "What to Build"
    - Write all tests in "Tests to Write" (if applicable)
    - Run tests as you work
 
 2. **Verify Success Criteria**
+
    - Check EVERY box in "Success Criteria"
    - Run EVERY command specified
    - **Only check when 100% complete** (not "mostly done")
    - All tests must pass, all commands must work
 
 3. **Document Implementation Notes**
+
    - Fill in the "Implementation Notes" section with:
      - What was actually implemented
      - Deviations from plan (if any)
